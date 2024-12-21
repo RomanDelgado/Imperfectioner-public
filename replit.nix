@@ -1,3 +1,4 @@
+
 {pkgs}: {
   deps = [
     pkgs.pulseaudio
@@ -6,5 +7,8 @@
     pkgs.libjack2
     pkgs.alsa-lib
     pkgs.portaudio
+    pkgs.alsaLib
+    pkgs.alsaUtils
+    pkgs.alsaTools
   ];
 }
