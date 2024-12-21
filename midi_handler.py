@@ -49,18 +49,28 @@ class MIDIHandler:
             print(f"\nWarning: Could not initialize MIDI hardware: {e}")
             print("Attempting to create virtual MIDI input...")
             
-            try:
-                self.midi_in = rtmidi.MidiIn()
-                port_name = "Virtual MIDI Input"
-                print(f"Creating virtual port: {port_name}")
-                self.midi_in.open_virtual_port(port_name)
-                self.midi_in.set_callback(self.callback)
-                self.port_name = port_name
-                self.is_virtual = True
-                print("✓ Virtual port created successfully")
-            except Exception as e:
+            # On Windows, we'll try to create a virtual port as a last resort
+            if sys.platform == 'win32':
+                try:
+                    self.midi_in = rtmidi.MidiIn(rtmidi.API_WINDOWS_MM)
+                    port_name = "Virtual MIDI Input"
+                    print(f"Creating virtual port: {port_name}")
+                    self.midi_in.open_virtual_port(port_name)
+                    self.midi_in.set_callback(self.callback)
+                    self.port_name = port_name
+                    self.is_virtual = True
+                    print("✓ Virtual port created successfully")
+                except Exception as e:
+                    print("\nNote: MIDI hardware and virtual ports unavailable")
+                    print("Reason:", str(e))
+                    print("Falling back to mock MIDI interface for testing")
+                    self.midi_in = MockMIDIInput()
+                    self.midi_in.set_callback(self.callback)
+                    self.port_name = "Mock MIDI Interface"
+                    self.is_mock = True
+                    print("✓ Mock MIDI interface initialized")
+            else:
                 print("\nNote: MIDI hardware and virtual ports unavailable")
-                print("Reason:", str(e))
                 print("Falling back to mock MIDI interface for testing")
                 self.midi_in = MockMIDIInput()
                 self.midi_in.set_callback(self.callback)

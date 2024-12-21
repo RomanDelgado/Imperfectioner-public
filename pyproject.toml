@@ -1,11 +1,10 @@
 [project]
 name = "repl-nix-pythonsynthesis"
 version = "0.1.0"
-description = "Add your description here"
+description = "A polyphonic MIDI synthesizer with real-time audio processing capabilities"
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=2.2.0",
-    "pyinstaller>=6.11.1",
     "python-rtmidi>=1.5.8",
     "sounddevice>=0.5.1",
 ]

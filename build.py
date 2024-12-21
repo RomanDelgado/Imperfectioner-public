@@ -1,16 +1,10 @@
 
-import PyInstaller.__main__
-import sys
-
-PyInstaller.__main__.run([
-    'synth.py',
-    '--onefile',
-    '--name=midi_synth',
-    '--add-data=oscillator.py;.',
-    '--add-data=voice_manager.py;.',
-    '--add-data=midi_handler.py;.',
-    '--add-data=audio_output.py;.',
-    '--add-data=envelope.py;.',
-    '--noconsole',
-    '--icon=generated-icon.png'
-])
+"""
+This file is no longer needed as dependencies are managed through pip/pyproject.toml.
+For local development:
+1. Create a virtual environment: python -m venv venv
+2. Activate it: 
+   - Windows: .\venv\Scripts\activate
+   - Unix: source venv/bin/activate
+3. Install dependencies: pip install numpy python-rtmidi sounddevice
+"""

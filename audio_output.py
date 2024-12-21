@@ -47,9 +47,24 @@ class AudioOutput:
             
             try:
                 # Try to find a working audio device
-                devices = sd.query_devices()
-                default_device = sd.default.device[1] if sd.default.device is not None else None
-                
+                try:
+                    devices = sd.query_devices()
+                    default_device = sd.default.device[1] if sd.default.device is not None else None
+                    
+                    print("\nAvailable Audio Devices:")
+                    device_found = False
+                    for i, device in enumerate(devices):
+                        if device['max_output_channels'] > 0:
+                            device_found = True
+                            print(f"[{i}] {device['name']}")
+                    
+                    if not device_found:
+                        print("No audio output devices found")
+                        raise sd.PortAudioError("No audio output devices available")
+                except Exception as e:
+                    print(f"\nError querying audio devices: {e}")
+                    raise
+
                 # Check if we have a valid output device
                 if default_device is not None and default_device >= 0:
                     device_info = devices[default_device]

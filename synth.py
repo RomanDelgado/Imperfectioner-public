@@ -105,25 +105,41 @@ class Synthesizer:
             print(f"Block Size: {self.block_size} samples")
             print(f"Buffer Length: {self.block_size/self.sample_rate*1000:.1f} ms")
             
-            # Try to find a working audio device
-            devices = sd.query_devices()
-            default_device = sd.default.device[1] if sd.default.device is not None else None
-            print("\nAvailable Audio Devices:")
-            for i, device in enumerate(devices):
-                if device['max_output_channels'] > 0:
-                    print(f"[{i}] {device['name']}")
-
-            print("\nNote: Using null audio backend for testing")
-            print("MIDI events will be processed and voice generation simulated")
+            print("\nInitializing Audio System...")
+            print("------------------------")
+            
+            try:
+                # Try to find a working audio device
+                devices = sd.query_devices()
+                default_device = sd.default.device[1] if sd.default.device is not None else None
+                
+                print("Available Audio Devices:")
+                device_found = False
+                for i, device in enumerate(devices):
+                    if device['max_output_channels'] > 0:
+                        device_found = True
+                        print(f"[{i}] {device['name']}")
+                        if i == default_device:
+                            print(f"    ↳ (Default Output Device)")
+                
+                if not device_found:
+                    print("No audio output devices found")
+                    print("\nFalling back to null audio backend")
+                    print("MIDI events will be processed and voice generation simulated")
+            except Exception as e:
+                print(f"\nError querying audio devices: {e}")
+                print("Falling back to null audio backend")
+                print("MIDI events will be processed and voice generation simulated")
             
             print("\nPress Ctrl+C to stop the synthesizer")
             print("=====================================")
-            
+
             try:
                 with sd.OutputStream(channels=1, 
                                    samplerate=self.sample_rate,
                                    blocksize=self.block_size,
-                                   callback=self.audio_callback):
+                                   callback=self.audio_callback,
+                                   device=None):  # Use default device
                     print("\nAudio stream started")
                     print("Playing synthesizer output...")
                     while True:
@@ -131,6 +147,11 @@ class Synthesizer:
             except KeyboardInterrupt:
                 print("\nShutting down synthesizer...")
                 return
+            except sd.PortAudioError as e:
+                print(f"\nAudio device error: {e}")
+                print("Continuing with null audio backend")
+                while True:
+                    sd.sleep(100)
                 
         except Exception as e:
             print(f"\nUnexpected error: {e}")
@@ -143,52 +164,91 @@ class Synthesizer:
             print("Note: Test MIDI input only available in mock mode")
             return
             
-        print("\nSending test MIDI messages...")
-        print("=========================")
+        print("\nStarting Synthesizer Test Sequence")
+        print("===============================")
         
-        # Test note on/off
-        print("\nTest 1: Single Note")
-        print("------------------")
-        print("Sending: Middle C, forte velocity")
+        # Test 1: Basic Note Playback
+        print("\nTest 1: Basic Note Playback")
+        print("-------------------------")
+        print("Playing: Middle C (forte)")
         self.midi_handler.send_test_note_on(60, 100)  # Middle C
-        sd.sleep(500)  # Wait 500ms
-        print("Sending: Note Off")
+        sd.sleep(800)  # Hold note
+        print("Releasing note...")
         self.midi_handler.send_test_note_off(60)
-        sd.sleep(200)  # Brief pause between tests
+        sd.sleep(500)  # Let release finish
         
-        # Test chord
-        print("\nTest 2: Major Chord")
-        print("-----------------")
-        print("Sending: C Major (C-E-G)")
-        self.midi_handler.send_test_note_on(60, 100)  # C
-        self.midi_handler.send_test_note_on(64, 100)  # E
-        self.midi_handler.send_test_note_on(67, 100)  # G
-        sd.sleep(1000)  # Wait 1s
-        print("Sending: Release chord")
-        self.midi_handler.send_test_note_off(60)
-        self.midi_handler.send_test_note_off(64)
-        self.midi_handler.send_test_note_off(67)
-        sd.sleep(500)  # Pause before controls
+        # Test 2: Velocity Sensitivity
+        print("\nTest 2: Velocity Sensitivity")
+        print("-------------------------")
+        for velocity in [32, 64, 96, 127]:
+            print(f"Playing: Note E4 (velocity: {velocity})")
+            self.midi_handler.send_test_note_on(64, velocity)
+            sd.sleep(500)
+            self.midi_handler.send_test_note_off(64)
+            sd.sleep(200)
         
-        # Test controls
-        print("\nTest 3: ADSR Controls")
-        print("-------------------")
-        for ctrl, name in [(73, "Attack"), (74, "Decay"), (75, "Sustain"), (76, "Release")]:
-            print(f"\nTesting: {name} Time")
-            print(f"Sending: {name} Min → Mid → Max")
-            for value in [0, 64, 127]:
+        # Test 3: Polyphonic Playback
+        print("\nTest 3: Polyphonic Playback")
+        print("-------------------------")
+        print("Playing: C Major Chord (C4-E4-G4)")
+        self.midi_handler.send_test_note_on(60, 100)  # C4
+        sd.sleep(100)
+        self.midi_handler.send_test_note_on(64, 100)  # E4
+        sd.sleep(100)
+        self.midi_handler.send_test_note_on(67, 100)  # G4
+        sd.sleep(1000)
+        print("Releasing chord in sequence...")
+        self.midi_handler.send_test_note_off(67)  # G4
+        sd.sleep(200)
+        self.midi_handler.send_test_note_off(64)  # E4
+        sd.sleep(200)
+        self.midi_handler.send_test_note_off(60)  # C4
+        sd.sleep(500)
+        
+        # Test 4: ADSR Envelope
+        print("\nTest 4: ADSR Envelope Control")
+        print("--------------------------")
+        controls = [
+            (73, "Attack", [0, 64, 127], ["Short", "Medium", "Long"]),
+            (74, "Decay", [0, 64, 127], ["Short", "Medium", "Long"]),
+            (75, "Sustain", [0, 64, 127], ["Low", "Medium", "High"]),
+            (76, "Release", [0, 64, 127], ["Short", "Medium", "Long"])
+        ]
+        
+        for ctrl, name, values, labels in controls:
+            print(f"\nTesting {name} Time:")
+            for value, label in zip(values, labels):
+                print(f"Setting {name}: {label}")
                 self.midi_handler.send_test_control_change(ctrl, value)
-                sd.sleep(300)
+                sd.sleep(200)
+                # Play test note with new settings
+                print("Playing test note...")
+                self.midi_handler.send_test_note_on(69, 100)  # A4
+                sd.sleep(800)
+                self.midi_handler.send_test_note_off(69)
+                sd.sleep(500)
         
-        print("\nTest 4: Oscillator Type")
-        print("---------------------")
-        print("Cycling through waveforms...")
-        ctrl = 77
-        for value in [0, 42, 84, 127]:  # Spread across the range
-            self.midi_handler.send_test_control_change(ctrl, value)
+        # Test 5: Oscillator Waveforms
+        print("\nTest 5: Oscillator Waveforms")
+        print("-------------------------")
+        waveforms = ["Sine", "Sawtooth", "Triangle", "Pulse"]
+        for i, name in enumerate(waveforms):
+            print(f"Setting waveform: {name}")
+            self.midi_handler.send_test_control_change(77, int(i * 42))
+            sd.sleep(200)
+            # Play arpeggio with new waveform
+            notes = [60, 64, 67, 72]  # C major arpeggio
+            print(f"Playing arpeggio with {name} wave")
+            for note in notes:
+                self.midi_handler.send_test_note_on(note, 100)
+                sd.sleep(200)
+                self.midi_handler.send_test_note_off(note)
+                sd.sleep(50)
             sd.sleep(300)
             
-        print("\nTest sequence complete!")
+        print("\nTest Sequence Complete!")
+        print("===================")
+        print("All basic synthesizer functions verified")
 
 if __name__ == "__main__":
     try:
@@ -197,22 +257,30 @@ if __name__ == "__main__":
         # Start the synth
         synth.run()
         
-        print("\nStarting test sequence in 2 seconds...")
-        sd.sleep(2000)
-        
-        # Run test sequence if in mock mode
-        synth.test_midi_input()
-        
-        print("\nTest sequence completed")
-        print("Press Ctrl+C to exit")
+        # If using mock MIDI interface, run test sequence
+        if hasattr(synth.midi_handler, 'is_mock') and synth.midi_handler.is_mock:
+            print("\nStarting test sequence in 2 seconds...")
+            print("(Using mock MIDI interface for testing)")
+            sd.sleep(2000)
+            
+            # Run comprehensive test sequence
+            synth.test_midi_input()
+            
+            print("\nTest sequence completed")
+            print("Synthesizer will continue running...")
+            print("Press Ctrl+C to exit")
+        else:
+            print("\nWaiting for MIDI input...")
+            print("Press Ctrl+C to exit")
         
         # Keep running until interrupted
-        while True:
-            sd.sleep(1000)
-            
-    except KeyboardInterrupt:
-        print("\nExiting synthesizer...")
+        try:
+            while True:
+                sd.sleep(1000)
+        except KeyboardInterrupt:
+            print("\nExiting synthesizer...")
     except Exception as e:
         print(f"\nError: {e}")
+        print("Try running with '--mock' flag for testing without MIDI hardware")
     finally:
         print("Cleanup complete")

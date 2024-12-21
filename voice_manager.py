@@ -82,6 +82,12 @@ class VoiceManager:
                 print(f"Active Voices: {active_voices}")
                 print(f"Notes Playing: {', '.join(sorted(active_notes))}")
                 print(f"Voice Usage: {active_voices}/{len(self.voices)} ({active_voices/len(self.voices)*100:.0f}%)")
+                print(f"Voice Allocation:")
+                for i, voice in enumerate(self.voices):
+                    if voice.is_active():
+                        note_name = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][voice.note % 12]
+                        octave = (voice.note // 12) - 1
+                        print(f"  Voice {i:2d}: {note_name}{octave} (MIDI: {voice.note}, Velocity: {voice.velocity*127:.0f})")
                 self._last_active_count = len(active_notes)
             
         return mixed
