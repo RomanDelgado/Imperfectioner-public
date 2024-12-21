@@ -123,11 +123,17 @@ class Synthesizer:
                         print(f"[{i}] {device['name']}")
                         if i == default_device:
                             print(f"    ↳ (Default Output Device)")
+                            
+                # Initialize audio backend with the default device
+                stream_settings = {
+                    'channels': 1,
+                    'samplerate': self.sample_rate,
+                    'blocksize': self.block_size,
+                    'callback': self.audio_callback
+                }
                 
-                if not device_found:
-                    print("No audio output devices found")
-                    print("\nFalling back to null audio backend")
-                    print("MIDI events will be processed and voice generation simulated")
+                if device_found:
+                    stream_settings['device'] = default_device
             except Exception as e:
                 print(f"\nError querying audio devices: {e}")
                 print("Falling back to null audio backend")
