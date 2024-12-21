@@ -104,6 +104,15 @@ class Synthesizer:
             print(f"Sample Rate: {self.sample_rate} Hz")
             print(f"Block Size: {self.block_size} samples")
             print(f"Buffer Length: {self.block_size/self.sample_rate*1000:.1f} ms")
+            
+            # Try to find a working audio device
+            devices = sd.query_devices()
+            default_device = sd.default.device[1] if sd.default.device is not None else None
+            print("\nAvailable Audio Devices:")
+            for i, device in enumerate(devices):
+                if device['max_output_channels'] > 0:
+                    print(f"[{i}] {device['name']}")
+
             print("\nNote: Using null audio backend for testing")
             print("MIDI events will be processed and voice generation simulated")
             
