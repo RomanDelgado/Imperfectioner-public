@@ -55,7 +55,7 @@ class Synthesizer:
             
             # Enhanced control name mapping
             ctrl_names = {
-                73: ("Attack Time", "ms", normalized * 2000),
+                73: ("Attack Time ", "ms", normalized * 2000),
                 74: ("Decay Time", "ms", normalized * 2000),
                 75: ("Sustain Level", "%", normalized * 100),
                 76: ("Release Time", "ms", normalized * 2000),
