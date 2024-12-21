@@ -60,10 +60,16 @@ if __name__ == "__main__":
 
     # If using mock MIDI, run test sequence
     if hasattr(synth.midi_handler, 'is_mock') and synth.midi_handler.is_mock:
-        print("\nRunning test sequence...")
-        synth.midi_handler.send_test_note_on(60, 100)  # Middle C
+        print("\nRunning test sequence with mock MIDI input...")
+        print("Playing a simple melody...")
+            
         import time
-        time.sleep(1)
-        synth.midi_handler.send_test_note_off(60)
+        notes = [60, 64, 67, 72]  # C major chord ascending
+        for note in notes:
+            print(f"Playing note {note}...")
+            synth.midi_handler.send_test_note_on(note, 100)
+            time.sleep(0.5)
+            synth.midi_handler.send_test_note_off(note)
+            time.sleep(0.1)
 
     synth.run()

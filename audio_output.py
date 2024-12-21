@@ -7,6 +7,7 @@ class AudioOutput:
         self.sample_rate = sample_rate
         self.block_size = block_size
         self.stream = None
+        self.null_audio = False  # Flag for null audio mode
         self.setup_audio()
 
     def setup_audio(self):
@@ -121,13 +122,13 @@ class AudioOutput:
             print("\nAudio initialization failed!")
             print("-------------------------")
             print(f"Error: {str(e)}")
-            print("\nTroubleshooting steps for VS Code:")
-            print("1. Check Windows Sound settings")
-            print("2. Verify your audio device is set as default")
-            print("3. Try running VS Code as administrator")
-            print("4. If using WSL, check WSL audio setup")
-            print("\nRunning in silent mode for testing...")
+            print("\nTroubleshooting steps:")
+            print("1. Check if audio device is connected and working")
+            print("2. Verify system audio settings")
+            print("3. Try running with administrator privileges")
+            print("\nRunning in null audio mode (visual feedback only)...")
             self.stream = None
+            self.null_audio = True  # Enable null audio mode
 
     def audio_callback(self, outdata, frames, time, status):
         if status:
@@ -139,6 +140,13 @@ class AudioOutput:
             print(f"Audio callback error: {e}")
 
     def write(self, samples):
+        if self.null_audio:
+            # In null audio mode, just print audio levels for debugging
+            if np.any(samples):
+                max_level = np.max(np.abs(samples))
+                print(f"\rAudio Level: {'#' * int(max_level * 20):<20}", end='', flush=True)
+            return
+            
         if self.stream and self.stream.active:
             try:
                 # Ensure samples are float32 and in correct shape

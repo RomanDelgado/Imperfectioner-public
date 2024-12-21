@@ -19,9 +19,14 @@ class Voice:
         
     def note_off(self):
         self.envelope.note_off()
+        if self.envelope.state == 'idle':
+            self.active = False
         
     def is_active(self):
-        return self.active and self.envelope.state != 'idle'
+        active = self.active and self.envelope.state != 'idle'
+        if not active and self.active:
+            self.active = False
+        return active
         
     def generate_samples(self, num_samples):
         if not self.active:
@@ -63,6 +68,7 @@ class VoiceManager:
         mixed = np.zeros(num_samples)
         active_voices = 0
         active_notes = []
+        max_level = 0.0  # Track maximum level for visualization
         
         for voice in self.voices:
             if voice.is_active():
@@ -76,6 +82,10 @@ class VoiceManager:
         # Prevent clipping by normalizing based on voice count
         if active_voices > 0:
             mixed /= max(1, np.sqrt(active_voices))
+            max_level = np.max(np.abs(mixed))
+            if max_level > 0.01:  # Only show significant levels
+                level_display = "█" * int(max_level * 20)
+                print(f"\rLevel: {level_display:<20} | Active Voices: {active_voices}", end="", flush=True)
             if len(active_notes) != self._last_active_count:
                 print("\nVoice Status Update:")
                 print("-----------------")
