@@ -11,7 +11,6 @@ class Synthesizer:
         self.sample_rate = 44100
         self.block_size = 256
         self.voice_manager = VoiceManager(self.sample_rate)
-        self.audio_output = AudioOutput(self.sample_rate, self.block_size)
         self.midi_handler = MIDIHandler(self.handle_midi_message)
         
     def handle_midi_message(self, message, _):
