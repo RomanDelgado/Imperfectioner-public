@@ -1,4 +1,3 @@
-
 import mido
 from collections import deque
 
@@ -12,7 +11,15 @@ class MockMIDIInput:
         
     def send_test_message(self, message):
         if self.callback:
-            self.callback([message.status_byte, message.note, message.velocity], None)
+            # For note messages, construct the status byte:
+            # High nibble: message type (0x90 for note on, 0x80 for note off)
+            # Low nibble: channel number (0-15)
+            if message.type in ['note_on', 'note_off']:
+                status = (0x90 if message.type == 'note_on' else 0x80) | (message.channel & 0x0F)
+                self.callback([status, message.note, message.velocity], None)
+            elif message.type == 'control_change':
+                status = 0xB0 | (message.channel & 0x0F)
+                self.callback([status, message.control, message.value], None)
             
     def send_note_on(self, note, velocity=64, channel=1):
         msg = mido.Message('note_on', note=note, velocity=velocity, channel=channel-1)
