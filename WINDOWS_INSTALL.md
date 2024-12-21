@@ -3,10 +3,11 @@
 ## Prerequisites
 1. Python 3.11 or higher
 2. Visual Studio Code with Python extension
-3. Microsoft Visual C++ Build Tools
-   - **Important**: This is just the build tools, not Visual Studio IDE
-   - This is required for building the `python-rtmidi` package
-   - Without this, you will get the error: "Microsoft Visual C++ 14.0 or greater is required"
+3. Microsoft C++ Build Tools
+   - **Important**: You only need the Build Tools, NOT Visual Studio IDE
+   - Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+   - Required for building the `python-rtmidi` package
+   - If skipped, you'll see: "Microsoft Visual C++ 14.0 or greater is required"
 
 ## Step 1: VS Code Setup
 1. Download and install Visual Studio Code:

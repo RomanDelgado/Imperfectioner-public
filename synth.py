@@ -138,21 +138,47 @@ class Synthesizer:
             print("=====================================")
 
             try:
-                with sd.OutputStream(channels=1, 
-                                   samplerate=self.sample_rate,
-                                   blocksize=self.block_size,
-                                   callback=self.audio_callback,
-                                   device=None):  # Use default device
-                    print("\nAudio stream started")
+                device_info = None
+                try:
+                    devices = sd.query_devices()
+                    default_device = sd.default.device[1]
+                    if default_device is not None:
+                        device_info = devices[default_device]
+                        print(f"\nUsing audio device: {device_info['name']}")
+                except Exception:
+                    pass
+
+                stream_settings = {
+                    'channels': 1,
+                    'samplerate': self.sample_rate,
+                    'blocksize': self.block_size,
+                    'callback': self.audio_callback
+                }
+                
+                if device_info:
+                    stream_settings['device'] = default_device
+                    print(f"Sample Rate: {device_info['default_samplerate']} Hz")
+                    print(f"Channels: {device_info['max_output_channels']}")
+                
+                with sd.OutputStream(**stream_settings):
+                    print("\nAudio stream started successfully")
                     print("Playing synthesizer output...")
+                    print("\nControls:")
+                    print("- CC 73: Attack Time")
+                    print("- CC 74: Decay Time")
+                    print("- CC 75: Sustain Level")
+                    print("- CC 76: Release Time")
+                    print("- CC 77: Oscillator Type")
                     while True:
                         sd.sleep(100)
+                        
             except KeyboardInterrupt:
                 print("\nShutting down synthesizer...")
                 return
             except sd.PortAudioError as e:
                 print(f"\nAudio device error: {e}")
-                print("Continuing with null audio backend")
+                print("Continuing with null audio backend for testing")
+                print("\nMIDI events will be processed and voice generation simulated")
                 while True:
                     sd.sleep(100)
                 
