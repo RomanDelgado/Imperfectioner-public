@@ -29,16 +29,9 @@ class MockMIDIInput:
 class MIDIHandler:
     def __init__(self, callback):
         self.callback = callback
-        self.midi_in = None
-        self.port_name = None
-        self.is_mock = True
-        
-        print("\nInitializing MIDI System...")
-        print("-------------------------")
-        print("Using mock MIDI interface for testing")
         self.midi_in = MockMIDIInput()
         self.midi_in.set_callback(callback)
-        self.port_name = "Mock MIDI Interface"
+        self.is_mock = True
             
     def send_test_note_on(self, note, velocity=64, channel=1):
         if isinstance(self.midi_in, MockMIDIInput):

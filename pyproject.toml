@@ -1,9 +1,7 @@
 
 [project]
-name = "repl-nix-pythonsynthesis"
+name = "midi-synthesizer"
 version = "0.1.0"
-description = "A polyphonic MIDI synthesizer with real-time audio processing capabilities"
-requires-python = ">=3.11"
 dependencies = [
     "numpy==2.2.0",
     "sounddevice==0.5.1",

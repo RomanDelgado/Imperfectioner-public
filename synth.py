@@ -3,7 +3,7 @@ import sounddevice as sd
 from datetime import datetime as import_time
 from midi_handler import MIDIHandler
 from voice_manager import VoiceManager
-from audio_output import AudioOutput
+import sounddevice as sd
 from oscillator import midi_to_freq
 
 class Synthesizer:
