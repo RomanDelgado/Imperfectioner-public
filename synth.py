@@ -111,11 +111,14 @@ class Synthesizer:
             print("=====================================")
             
             try:
-                while True:
-                    # Generate audio in blocks
-                    audio_block = self.voice_manager.get_audio_block(self.block_size)
-                    self.audio_output.write(audio_block)
-                    sd.sleep(int(1000 * self.block_size / self.sample_rate))
+                with sd.OutputStream(channels=1, 
+                                   samplerate=self.sample_rate,
+                                   blocksize=self.block_size,
+                                   callback=self.audio_callback):
+                    print("\nAudio stream started")
+                    print("Playing synthesizer output...")
+                    while True:
+                        sd.sleep(100)
             except KeyboardInterrupt:
                 print("\nShutting down synthesizer...")
                 return
