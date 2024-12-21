@@ -39,6 +39,7 @@ class VoiceManager:
     def __init__(self, sample_rate, max_voices=16):
         self.voices = [Voice(sample_rate) for _ in range(max_voices)]
         self.sample_rate = sample_rate
+        self._last_active_count = 0  # For tracking voice count changes
         
     def note_on(self, note, velocity):
         # First try to find an inactive voice
@@ -67,21 +68,23 @@ class VoiceManager:
             if voice.is_active():
                 mixed += voice.generate_samples(num_samples)
                 active_voices += 1
-                active_notes.append(voice.note)
+                note = voice.note
+                note_name = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][note % 12]
+                octave = (note // 12) - 1
+                active_notes.append(f"{note_name}{octave}")
                 
         # Prevent clipping by normalizing based on voice count
         if active_voices > 0:
             mixed /= max(1, np.sqrt(active_voices))
             if len(active_notes) != self._last_active_count:
-                print(f"Active voices: {active_voices}, notes: {sorted(active_notes)}")
+                print("\nVoice Status Update:")
+                print("-----------------")
+                print(f"Active Voices: {active_voices}")
+                print(f"Notes Playing: {', '.join(sorted(active_notes))}")
+                print(f"Voice Usage: {active_voices}/{len(self.voices)} ({active_voices/len(self.voices)*100:.0f}%)")
                 self._last_active_count = len(active_notes)
             
         return mixed
-        
-    def __init__(self, sample_rate, max_voices=16):
-        self.voices = [Voice(sample_rate) for _ in range(max_voices)]
-        self.sample_rate = sample_rate
-        self._last_active_count = 0  # For tracking voice count changes
         
     def set_attack(self, value):
         for voice in self.voices:
