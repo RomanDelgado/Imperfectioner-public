@@ -2,6 +2,7 @@ import numpy as np
 from collections import deque
 import sounddevice as sd
 import sys
+import time
 
 class NullAudioBackend:
     def __init__(self, sample_rate):
@@ -32,186 +33,179 @@ class AudioOutput:
     def __init__(self, sample_rate, block_size):
         self.sample_rate = sample_rate
         self.block_size = block_size
-        self.buffer = deque(maxlen=block_size * 4)  # Increased buffer size for stability
+        self.buffer = deque(maxlen=block_size * 8)  # Increased buffer size for stability
         self.backend = None
+        self.stream = None
         self.setup_audio()
         
     def setup_audio(self):
+        print("\nAudio System Configuration")
+        print("=======================")
+        print(f"Sample Rate: {self.sample_rate} Hz")
+        print(f"Block Size: {self.block_size} samples")
+        print(f"Block Duration: {self.block_size/self.sample_rate*1000:.1f} ms")
+        print(f"Buffer Size: {self.buffer.maxlen} samples")
+        print(f"Buffer Duration: {self.buffer.maxlen/self.sample_rate*1000:.1f} ms")
+        
         try:
-            print("\nAudio System Configuration")
-            print("=======================")
-            print(f"Sample Rate: {self.sample_rate} Hz")
-            print(f"Block Size: {self.block_size} samples")
-            print(f"Block Duration: {self.block_size/self.sample_rate*1000:.1f} ms")
-            print(f"Buffer Size: {self.buffer.maxlen} samples")
-            print(f"Buffer Duration: {self.buffer.maxlen/self.sample_rate*1000:.1f} ms")
+            # Try to initialize sounddevice with a small timeout
+            sd._terminate()
+            time.sleep(0.1)  # Give time for cleanup
+            sd._initialize()
             
+            # Get host APIs first
             try:
-                    # Get host APIs first
-                    if sys.platform == 'win32':
-                        print("\nConfiguring Windows Audio System...")
-                        print("-----------------------------")
-                        try:
-                            host_apis = sd.query_hostapis()
-                            recommended_apis = ['WASAPI', 'DirectSound']
-                            print("\nAvailable Audio APIs:")
-                            print("------------------")
-                            for i, api in enumerate(host_apis):
-                                print(f"[{i}] {api['name']}")
-                                if api['name'] in recommended_apis:
-                                    print("    ↳ (Recommended for Windows)")
-                                    if api['name'] == 'WASAPI':
-                                        print("       Best for low latency")
-                                    elif api['name'] == 'DirectSound':
-                                        print("       Most compatible")
-                        except Exception as e:
-                            print("\nWarning: Could not query Windows audio APIs")
-                            print(f"Error: {e}")
-                            print("\nTroubleshooting steps:")
-                            print("1. Check Windows audio settings")
-                            print("2. Verify audio drivers are installed")
-                            print("3. Try running VS Code as administrator")
-                            raise
-                    else:
-                        # Non-Windows platforms
-                        host_apis = sd.query_hostapis()
-                        print("\nAvailable Audio APIs:")
-                        print("------------------")
-                        for i, api in enumerate(host_apis):
-                            print(f"[{i}] {api['name']}")
-                            if sys.platform == 'darwin' and api['name'] == 'CoreAudio':
-                                print("    ↳ (Recommended for macOS)")
-                            elif sys.platform == 'linux' and api['name'] == 'ALSA':
-                                print("    ↳ (Recommended for Linux)")
-                except Exception as e:
-                    print(f"\nWarning: Could not query audio APIs: {e}")
-                    print("This might be because:")
-                    print("- Audio subsystem is not initialized")
-                    print("- No audio drivers are installed")
+                host_apis = sd.query_hostapis()
+                if sys.platform == 'win32':
+                    print("\nConfiguring Windows Audio System...")
+                    print("-----------------------------")
                     
-                # Query devices with better error handling
-                try:
-                    devices = sd.query_devices()
-                    if devices is None:
-                        raise sd.PortAudioError("No audio devices found")
+                    wasapi_found = False
+                    dsound_found = False
                     
-                    if sys.platform == 'win32':
-                        print("\nWindows Audio Devices:")
-                        print("-------------------")
-                        default_device = None
-                        try:
-                            default_device = sd.default.device[1]
-                            if default_device is not None:
-                                device_info = devices[default_device]
-                                print(f"Default Output: {device_info['name']}")
-                                print(f"Sample Rate: {device_info['default_samplerate']:.0f} Hz")
-                                print(f"Channels: {device_info['max_output_channels']}")
-                        except Exception as default_error:
-                            print("\nWarning: Could not detect default audio device")
-                            print("Please check Windows Sound settings")
-                    else:
-                        default_device = sd.default.device[1] if sd.default.device is not None else None
-                        
-                except Exception as e:
-                    if sys.platform == 'win32':
-                        print("\nError: Windows Audio Device Detection Failed")
-                        print("---------------------------------")
-                        print("Common Solutions:")
-                        print("1. Check Windows Sound settings:")
-                        print("   - Right-click speaker icon → Sound settings")
-                        print("   - Verify output device is selected and working")
-                        print("\n2. Check Device Manager:")
-                        print("   - Open Device Manager")
-                        print("   - Look for errors under 'Sound, video and game controllers'")
-                        print("   - Update or reinstall audio drivers if needed")
-                        print("\n3. Try running as administrator:")
-                        print("   - Close VS Code")
-                        print("   - Right-click VS Code → Run as administrator")
-                        print("   - Try running the synthesizer again")
-                    else:
-                        print(f"\nError querying audio devices: {e}")
-                        print("This might be because:")
-                        print("- Audio drivers are not installed")
-                        print("- The system has no audio devices")
-                        print("- Permission issues")
-                    raise
+                    for i, api in enumerate(host_apis):
+                        api_name = api['name'].upper()
+                        print(f"[{i}] {api['name']}")
+                        if 'WASAPI' in api_name:
+                            print("    ↳ (Recommended for low latency)")
+                            wasapi_found = True
+                        elif 'DIRECTSOUND' in api_name:
+                            print("    ↳ (Most compatible)")
+                            dsound_found = True
+                            
+                    if not (wasapi_found or dsound_found):
+                        print("\nWarning: No Windows audio APIs detected")
+                        print("Please ensure Windows audio services are running:")
+                        print("1. Press Win+R, type 'services.msc'")
+                        print("2. Find 'Windows Audio' and 'Windows Audio Endpoint Builder'")
+                        print("3. Ensure both are set to 'Automatic' and are running")
+                else:
+                    print("\nAvailable Audio APIs:")
+                    print("------------------")
+                    for i, api in enumerate(host_apis):
+                        print(f"[{i}] {api['name']}")
+                        if sys.platform == 'darwin' and api['name'] == 'CoreAudio':
+                            print("    ↳ (Recommended for macOS)")
+                        elif sys.platform == 'linux' and api['name'] == 'ALSA':
+                            print("    ↳ (Recommended for Linux)")
+                            
+            except Exception as e:
+                print(f"\nWarning: Could not query audio APIs: {e}")
+                if sys.platform == 'win32':
+                    print("\nTroubleshooting Windows Audio:")
+                    print("1. Check Windows audio services")
+                    print("2. Verify audio drivers are installed")
+                    print("3. Try running VS Code as administrator")
                 
-                print("\nScanning Audio Devices:")
+            # Query available devices
+            try:
+                devices = sd.query_devices()
+                if devices is None:
+                    raise RuntimeError("No audio devices found")
+                
+                print("\nDetected Audio Devices:")
                 print("--------------------")
-                output_devices = []
                 
+                # Get default device first
+                default_device = None
+                try:
+                    default_device = sd.default.device[1]
+                    if default_device is not None:
+                        device_info = devices[default_device]
+                        print(f"\nDefault Output Device:")
+                        print(f"- Name: {device_info['name']}")
+                        print(f"- Sample Rate: {device_info['default_samplerate']:.0f} Hz")
+                        print(f"- Channels: {device_info['max_output_channels']}")
+                except Exception as e:
+                    print(f"\nWarning: Could not get default device: {e}")
+                
+                # List all output devices
+                output_devices = []
                 for i, device in enumerate(devices):
                     try:
                         if device['max_output_channels'] > 0:
                             output_devices.append((i, device))
-                            print(f"\nDevice [{i}]: {device['name']}")
-                            if i == default_device:
-                                print("    ↳ Default Output Device")
-                            print(f"    API: {device.get('hostapi', 'Unknown')}")
-                            print(f"    Channels: {device['max_output_channels']}")
-                            print(f"    Sample Rate: {device['default_samplerate']:.0f} Hz")
-                            print(f"    Status: {'Active' if sd.check_output_settings(device=i, channels=1, samplerate=self.sample_rate) else 'Available'}")
-                    except Exception as dev_err:
-                        print(f"\nWarning: Could not query device {i}: {dev_err}")
-                        continue
+                            print(f"\nDevice [{i}]:")
+                            print(f"- Name: {device['name']}")
+                            print(f"- Channels: {device['max_output_channels']}")
+                            print(f"- Sample Rate: {device['default_samplerate']:.0f} Hz")
+                            is_default = i == default_device
+                            if is_default:
+                                print("  ↳ (Default Output Device)")
+                    except Exception as e:
+                        print(f"Warning: Could not query device {i}: {e}")
                 
                 if not output_devices:
-                    print("\nNo usable audio output devices found")
-                    print("Possible reasons:")
-                    print("- No audio devices connected")
-                    print("- Audio drivers not installed")
-                    print("- Permission issues accessing audio devices")
-                    print("\nFalling back to null audio backend for testing")
+                    print("\nNo audio output devices found")
+                    print("Falling back to null audio backend")
                     self.backend = NullAudioBackend(self.sample_rate)
                     self.backend.start()
                     return
-                    
-                # First try default device
-                if default_device is not None and default_device >= 0:
-                    try:
-                        device_info = devices[default_device]
-                        if device_info['max_output_channels'] > 0:
-                            if sd.check_output_settings(device=default_device, channels=1, samplerate=self.sample_rate):
-                                print(f"\nUsing default audio device: {device_info['name']}")
-                                print(f"Sample Rate: {device_info['default_samplerate']:.0f} Hz")
-                                print(f"Channels: {device_info['max_output_channels']}")
-                                return
-                    except Exception as e:
-                        print(f"\nWarning: Could not use default device: {e}")
                 
-                # Try first available device
+                # Try to use default device first
+                if default_device is not None:
+                    try:
+                        # Attempt to open a test stream
+                        test_stream = sd.OutputStream(
+                            device=default_device,
+                            channels=1,
+                            samplerate=self.sample_rate,
+                            blocksize=self.block_size
+                        )
+                        test_stream.start()
+                        test_stream.stop()
+                        test_stream.close()
+                        
+                        print(f"\nSuccessfully initialized audio output:")
+                        print(f"Using device: {devices[default_device]['name']}")
+                        return
+                    except Exception as e:
+                        print(f"\nCould not use default device: {e}")
+                
+                # Try other devices if default failed
                 for device_idx, device_info in output_devices:
                     try:
-                        if sd.check_output_settings(device=device_idx, channels=1, samplerate=self.sample_rate):
-                            print(f"\nUsing audio device: {device_info['name']}")
-                            print(f"Sample Rate: {device_info['default_samplerate']:.0f} Hz")
-                            print(f"Channels: {device_info['max_output_channels']}")
-                            return
+                        print(f"\nTrying device: {device_info['name']}")
+                        test_stream = sd.OutputStream(
+                            device=device_idx,
+                            channels=1,
+                            samplerate=self.sample_rate,
+                            blocksize=self.block_size
+                        )
+                        test_stream.start()
+                        test_stream.stop()
+                        test_stream.close()
+                        
+                        print(f"Successfully initialized audio output")
+                        print(f"Using device: {device_info['name']}")
+                        return
                     except Exception as e:
-                        print(f"\nWarning: Could not use device {device_idx}: {e}")
+                        print(f"Could not use device: {e}")
                         continue
                 
                 print("\nNo working audio devices found")
-                print("Falling back to null audio backend for testing")
+                print("Falling back to null audio backend")
                 self.backend = NullAudioBackend(self.sample_rate)
                 self.backend.start()
                 
             except Exception as e:
-                print(f"\nError during audio device scan: {e}")
-                print("Falling back to null audio backend for testing")
+                print(f"\nError scanning audio devices: {e}")
+                print("Falling back to null audio backend")
                 self.backend = NullAudioBackend(self.sample_rate)
                 self.backend.start()
                 
         except Exception as e:
             print(f"\nFatal audio system error: {e}")
-            raise
+            print("Falling back to null audio backend")
+            self.backend = NullAudioBackend(self.sample_rate)
+            self.backend.start()
     
     def write(self, samples):
         if self.backend:
             self.backend.write(samples)
         else:
             self.buffer.extend(samples)
-        
+            
     def read(self, num_samples):
         if self.backend:
             return np.zeros(num_samples)  # Null backend always returns silence
@@ -226,5 +220,15 @@ class AudioOutput:
         return output
         
     def __del__(self):
+        if hasattr(self, 'stream') and self.stream:
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except:
+                pass
+            
         if self.backend:
-            self.backend.stop()
+            try:
+                self.backend.stop()
+            except:
+                pass
