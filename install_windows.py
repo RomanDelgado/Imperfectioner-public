@@ -19,8 +19,8 @@ def main():
     # Required packages
     packages = [
         "numpy==2.2.0",
-        "python-rtmidi==1.5.8",
-        "sounddevice==0.5.1"
+        "sounddevice==0.5.1",
+        "mido==1.3.2"
     ]
     
     # Install each package
@@ -34,8 +34,6 @@ def main():
         print("You can now run the synthesizer with: python synth.py")
     else:
         print("\nSome dependencies failed to install.")
-        print("Please make sure you have Microsoft Visual C++ Build Tools installed.")
-        print("Visit: https://visualstudio.microsoft.com/visual-cpp-build-tools/")
 
 if __name__ == "__main__":
     main()
