@@ -7,9 +7,29 @@ from audio_output import AudioOutput
 class Synthesizer:
     def __init__(self):
         self.sample_rate = 44100
-        self.block_size = 256
-        self.audio_output = AudioOutput(self.sample_rate, self.block_size)
+        self.block_size = 1024  # Increased block size
         self.voice_manager = VoiceManager(self.sample_rate)
+        
+        # Setup audio output with callback
+        import sounddevice as sd
+        def audio_callback(outdata, frames, time, status):
+            if status:
+                print(f"Audio callback status: {status}")
+            try:
+                audio_block = self.voice_manager.get_audio_block(frames)
+                outdata[:] = audio_block.reshape(-1, 1)
+            except Exception as e:
+                print(f"Audio callback error: {e}")
+                outdata.fill(0)
+                
+        self.stream = sd.OutputStream(
+            channels=1,
+            samplerate=self.sample_rate,
+            blocksize=self.block_size,
+            dtype='float32',
+            callback=audio_callback
+        )
+        self.stream.start()
         self.midi_handler = MIDIHandler(self.handle_midi_message)
 
     def handle_midi_message(self, message, _):
@@ -40,13 +60,8 @@ class Synthesizer:
 
         try:
             while True:
-                # Generate and play audio
-                audio_block = self.voice_manager.get_audio_block(self.block_size)
-                self.audio_output.write(audio_block)
-
-                # Let the CPU breathe
                 import time
-                time.sleep(0.001)
+                time.sleep(0.1)  # Just keep the main thread alive
 
         except KeyboardInterrupt:
             print("\nStopping synthesizer...")
