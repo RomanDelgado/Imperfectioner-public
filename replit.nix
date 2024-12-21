@@ -1,6 +1,7 @@
 
 {pkgs}: {
   deps = [
+    pkgs.portmidi
     pkgs.pulseaudio
     pkgs.alsa-utils
     pkgs.pkg-config
