@@ -89,20 +89,36 @@ class MIDIHandler:
             print("Mode: Mock MIDI Interface (Testing Mode)")
             print("Note: No hardware MIDI devices will be detected")
             print("      Use programmatic MIDI input for testing")
+            print("\nAvailable MIDI Channels: 1-16")
+            print("Control Change Mappings:")
+            print("  CC 73: Attack Time")
+            print("  CC 74: Decay Time")
+            print("  CC 75: Sustain Level")
+            print("  CC 76: Release Time")
+            print("  CC 77: Oscillator Type")
             return
             
         try:
             ports = self.midi_in.get_port_count()
-            print("\nMIDI Port Status:")
-            print("----------------")
+            print("\nMIDI System Status:")
+            print("-----------------")
+            print(f"API: {self.midi_in.get_current_api_name()}")
             
             if ports:
-                print(f"Found {ports} hardware MIDI input port{'s' if ports > 1 else ''}:")
+                print(f"\nFound {ports} hardware MIDI input port{'s' if ports > 1 else ''}:")
+                print("\nAvailable MIDI Devices:")
+                print("--------------------")
                 for i in range(ports):
                     port_name = self.midi_in.get_port_name(i)
                     print(f"  [{i}] {port_name}")
                     if i == 0:  # Mark default port
                         print("      ↳ (Default Input Port)")
+                    try:
+                        # Try to get additional port information if available
+                        print(f"      Channel Mode: All channels (1-16)")
+                        print(f"      Status: {'Connected' if self.midi_in.is_port_open() else 'Available'}")
+                    except:
+                        pass
                 
                 try:
                     default_port = 0

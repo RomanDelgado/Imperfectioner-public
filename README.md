@@ -20,8 +20,10 @@ A polyphonic MIDI synthesizer with real-time audio processing capabilities, buil
 1. Python 3.11 or higher
 2. For Windows users:
    - Install [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   - Note: This is just the build tools, not Visual Studio IDE
    - During installation, select "Desktop development with C++" workload
    - This is required for building the python-rtmidi package
+   - Visual Studio Code is recommended for development
 
 ### Installation Steps
 1. Clone the repository

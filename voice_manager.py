@@ -83,6 +83,7 @@ class VoiceManager:
                 print(f"Notes Playing: {', '.join(sorted(active_notes))}")
                 print(f"Voice Usage: {active_voices}/{len(self.voices)} ({active_voices/len(self.voices)*100:.0f}%)")
                 print(f"Voice Allocation:")
+                print(f"Voice Allocation:")
                 for i, voice in enumerate(self.voices):
                     if voice.is_active():
                         note_name = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][voice.note % 12]

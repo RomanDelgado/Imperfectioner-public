@@ -1,5 +1,6 @@
 import numpy as np
 import sounddevice as sd
+from datetime import datetime as import_time
 from midi_handler import MIDIHandler
 from voice_manager import VoiceManager
 from audio_output import AudioOutput
@@ -18,10 +19,12 @@ class Synthesizer:
         msg_type = status & 0xF0
         channel = (status & 0x0F) + 1
         
-        # Print message type header
-        print("\nMIDI Message Received:")
-        print("--------------------")
-        print(f"Channel: {channel:2d}")
+        # Print message type header with timestamp
+        print("\nMIDI Event Detected:")
+        print("------------------")
+        print(f"Time: {import_time().strftime('%H:%M:%S.%f')[:-3]}")
+        print(f"Channel: {channel:2d}/16")
+        print(f"Message Type: 0x{msg_type:02X}")
         
         if msg_type == 0x90:  # Note On
             note = message[1]
@@ -166,26 +169,36 @@ class Synthesizer:
             
         print("\nStarting Synthesizer Test Sequence")
         print("===============================")
+        print("Testing MIDI Input on Multiple Channels")
+        print("Channel Range: 1-16")
+        print("Control Change Range: 0-127")
+        print("Note Range: 21-108 (A0-C8)")
         
-        # Test 1: Basic Note Playback
-        print("\nTest 1: Basic Note Playback")
-        print("-------------------------")
-        print("Playing: Middle C (forte)")
-        self.midi_handler.send_test_note_on(60, 100)  # Middle C
-        sd.sleep(800)  # Hold note
-        print("Releasing note...")
-        self.midi_handler.send_test_note_off(60)
-        sd.sleep(500)  # Let release finish
+        # Test 1: Basic Note Playback on Different Channels
+        print("\nTest 1: Multi-Channel Note Playback")
+        print("--------------------------------")
+        print("Playing notes on different MIDI channels...")
+        for channel in [1, 2, 4]:  # Test on different channels
+            print(f"\nChannel {channel}:")
+            print("Playing: Middle C (forte)")
+            self.midi_handler.send_test_note_on(60, 100, channel)  # Middle C
+            sd.sleep(800)  # Hold note
+            print("Releasing note...")
+            self.midi_handler.send_test_note_off(60, 0, channel)
+            sd.sleep(500)  # Let release finish
         
-        # Test 2: Velocity Sensitivity
-        print("\nTest 2: Velocity Sensitivity")
-        print("-------------------------")
-        for velocity in [32, 64, 96, 127]:
-            print(f"Playing: Note E4 (velocity: {velocity})")
-            self.midi_handler.send_test_note_on(64, velocity)
-            sd.sleep(500)
-            self.midi_handler.send_test_note_off(64)
-            sd.sleep(200)
+        # Test 2: Velocity Sensitivity and Channel Info
+        print("\nTest 2: Velocity Sensitivity and Channel Info")
+        print("----------------------------------------")
+        test_channels = [1, 2]  # Test on first two channels
+        for channel in test_channels:
+            print(f"\nTesting Channel {channel}:")
+            for velocity in [32, 64, 96, 127]:
+                print(f"Playing: Note E4 (velocity: {velocity}, channel: {channel})")
+                self.midi_handler.send_test_note_on(64, velocity, channel)
+                sd.sleep(500)
+                self.midi_handler.send_test_note_off(64, 0, channel)
+                sd.sleep(200)
         
         # Test 3: Polyphonic Playback
         print("\nTest 3: Polyphonic Playback")
@@ -205,28 +218,38 @@ class Synthesizer:
         self.midi_handler.send_test_note_off(60)  # C4
         sd.sleep(500)
         
-        # Test 4: ADSR Envelope
-        print("\nTest 4: ADSR Envelope Control")
-        print("--------------------------")
+        # Test 4: ADSR Envelope and Control Changes
+        print("\nTest 4: ADSR Envelope and Control Changes")
+        print("-------------------------------------")
+        print("Testing MIDI Control Change Messages:")
+        print(" CC 73: Attack Time (0-2000ms)")
+        print(" CC 74: Decay Time (0-2000ms)")
+        print(" CC 75: Sustain Level (0-100%)")
+        print(" CC 76: Release Time (0-2000ms)")
+        print(" CC 77: Oscillator Type (0-3)")
+        
         controls = [
-            (73, "Attack", [0, 64, 127], ["Short", "Medium", "Long"]),
-            (74, "Decay", [0, 64, 127], ["Short", "Medium", "Long"]),
-            (75, "Sustain", [0, 64, 127], ["Low", "Medium", "High"]),
-            (76, "Release", [0, 64, 127], ["Short", "Medium", "Long"])
+            (73, "Attack", [0, 64, 127], ["Short (0ms)", "Medium (1000ms)", "Long (2000ms)"]),
+            (74, "Decay", [0, 64, 127], ["Short (0ms)", "Medium (1000ms)", "Long (2000ms)"]),
+            (75, "Sustain", [0, 64, 127], ["Low (0%)", "Medium (50%)", "High (100%)"]),
+            (76, "Release", [0, 64, 127], ["Short (0ms)", "Medium (1000ms)", "Long (2000ms)"])
         ]
         
-        for ctrl, name, values, labels in controls:
-            print(f"\nTesting {name} Time:")
-            for value, label in zip(values, labels):
-                print(f"Setting {name}: {label}")
-                self.midi_handler.send_test_control_change(ctrl, value)
-                sd.sleep(200)
-                # Play test note with new settings
-                print("Playing test note...")
-                self.midi_handler.send_test_note_on(69, 100)  # A4
-                sd.sleep(800)
-                self.midi_handler.send_test_note_off(69)
-                sd.sleep(500)
+        test_channels = [1, 2]  # Test on first two channels
+        for channel in test_channels:
+            print(f"\nTesting Channel {channel}:")
+            for ctrl, name, values, labels in controls:
+                print(f"\nTesting {name} Time (CC {ctrl}):")
+                for value, label in zip(values, labels):
+                    print(f"Setting {name}: {label}")
+                    self.midi_handler.send_test_control_change(ctrl, value, channel)
+                    sd.sleep(200)
+                    # Play test note with new settings
+                    print(f"Playing test note on channel {channel}...")
+                    self.midi_handler.send_test_note_on(69, 100, channel)  # A4
+                    sd.sleep(800)
+                    self.midi_handler.send_test_note_off(69, 0, channel)
+                    sd.sleep(500)
         
         # Test 5: Oscillator Waveforms
         print("\nTest 5: Oscillator Waveforms")
